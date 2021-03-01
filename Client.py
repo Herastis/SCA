@@ -1,11 +1,11 @@
 import socket
 import time
-from Cryptodome.PublicKey import RSA
-from Cryptodome.Cipher import PKCS1_OAEP
-from Cryptodome.Cipher import AES
-from Cryptodome.Random import get_random_bytes
-from Cryptodome.Signature import pss
-from Cryptodome.Hash import SHA256
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
+from Crypto.Cipher import AES
+from Crypto.Random import get_random_bytes
+from Crypto.Hash import SHA256
+from Crypto.Signature import pss
 
 host = "localhost"
 port = 9009
@@ -33,7 +33,23 @@ OrderDesc = "Cartofi moi si buni la 100$ jumatatea de kilogram"
 #-------------------------------
 iv = b'12345678abcdefgh'
 
+#Cheie AES pentru C si PG
+key_cpg = get_random_bytes(16)
+print("CPG", key_cpg)
+AES_CPG = AES.new(key_cpg, AES.MODE_EAX)
+file_out = open("AES_CPG.bin", "wb")
+file_out.write(key_cpg)
+file_out.close()
+
 if __name__ == '__main__':
+
+    RSA_Ckey = RSA.generate(1024)
+    f = open('RSA_PubKC.pem', 'wb')
+    f.write(RSA_Ckey.publickey().exportKey('PEM'))
+    f.close()
+    f = open('RSA_PrivKC.pem', 'wb')
+    f.write(RSA_Ckey.exportKey('PEM'))
+    f.close()
     #public, private = key_generator()
     sb = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sb.connect((host, port))
@@ -93,39 +109,44 @@ if __name__ == '__main__':
         print("Date concatenate: ", pi)
 
         #Aplicam semnatura pe PI
-        f = open('mykey.pem', 'r')
+        f = open('RSA_PrivKC.pem', 'r')
         key = RSA.import_key(f.read())
         h = SHA256.new(pi)
         signaturePI = pss.new(key).sign(h)
         print("Semnatura datelor concatenate: ", signaturePI, end='\n\n')
 
         #Criptez pi si signaturePI cu AES
-        piEnc = AES_key.encrypt(pi)
-        signaturePIEnc = AES_key.encrypt(signaturePI)
+        piEnc = AES_CPG.encrypt(pi)
+        signaturePIEnc = AES_CPG.encrypt(signaturePI)
         print("PI criptat: ", piEnc)
         print("Semnatura PI criptat: ", signaturePIEnc)
         # PI<-----------------------------------------------------------
 
         #PO----------------------------------------------------------->
-        # #SigC(concatenarea)
-        # sigC =  Sid + amount + nc # + OrderDesc +
-        # print("SigC: ",sigC)
-        #
-        # #Aplicam semnatura pe SigC
-        # f = open('mykey.pem', 'r')
-        # key = RSA.import_key(f.read())
-        # h = SHA256.new()
-        # signatureC = pss.new(sigC).sign(h)
-        # print("Signature C: ", signatureC, end='\n\n')
-        #
-        # #PO(Concatenam)
-        # po = Sid + amount + nc + signatureC # + OrderDesc +
-        # print("PO: ", po)
-        # # PO<-----------------------------------------------------------
+        #SigC(concatenarea)
+        sigC =  Sid + amount + nc # + OrderDesc +
+        print("SigC: ",sigC)
 
+        #Aplicam semnatura pe SigC
+        f = open('RSA_PrivKC.pem', 'r')
+        key = RSA.import_key(f.read())
+        h = SHA256.new(sigC)
+        signatureC = pss.new(key).sign(h)
+        print("Signature C: ", signatureC, end='\n\n')
 
+        #PO(Concatenam)
+        po = Sid + amount + nc + signatureC # + OrderDesc +
+        print("PO: ", po)
 
+        # Criptam PO
+        poEncript = AES_key.encrypt(po)
+        # PO<-----------------------------------------------------------
+
+        # TRimitem PM si PO catre M
+
+        sb.send(poEncript)
+        sb.send(piEnc)
+        sb.send(signaturePIEnc)
 
     finally:
         sb.close()
-

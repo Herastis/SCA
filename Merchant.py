@@ -1,11 +1,11 @@
 import time
-from Cryptodome.Cipher import AES, PKCS1_OAEP
-from Cryptodome.Cipher import AES
-from Cryptodome.Signature import pss
-from Cryptodome.Hash import SHA256
-from Cryptodome.PublicKey import RSA
-from Cryptodome.Random import get_random_bytes
-from Cryptodome import Random
+from Crypto.Cipher import AES, PKCS1_OAEP
+from Crypto.Cipher import AES
+from Crypto.Signature import pss
+from Crypto.Hash import SHA256
+from Crypto.PublicKey import RSA
+from Crypto.Random import get_random_bytes
+from Crypto import Random
 import socket
 
 #c = client
@@ -81,6 +81,10 @@ if __name__ == '__main__':
         time.sleep(0.2)
         c.send(signatureEnc)
         time.sleep(0.2)
+
+        pm = c.recv(1024)
+        piEnc=c.recv(1024)
+        piSgn = c.recv(1024)
 
     finally:
         c.close()
