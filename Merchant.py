@@ -77,14 +77,10 @@ if __name__ == '__main__':
         time.sleep(0.2)
 
         #Primim datele criptate de la pasul 3
-        poEnc = c.recv(1024)
-        print("poEnc :", poEnc)
-        piEnc=c.recv(1024)
-        print("piEnc :", piEnc)
-        signaturePIEnc = c.recv(1024)
-        print("signaturePIEnc :", signaturePIEnc)
         Pas3 = c.recv(1024)
         print("Pas3 :", Pas3)
+        publicKey_PG = c.recv(1024)
+
 
     finally:
         c.close()
