@@ -1,3 +1,4 @@
+import time
 from Cryptodome.Cipher import AES, PKCS1_OAEP
 from Cryptodome.Cipher import AES
 from Cryptodome.Signature import pss
@@ -40,9 +41,10 @@ if __name__ == '__main__':
 
         #Obtinem decr cu care decriptam datele cardului criptate cu AES
         decryptor = PKCS1_OAEP.new(RSA_keys)
-        decrAES = decryptor.decrypt(encrAES)
-        print("Random Key from Client: ", decrAES)
-        AES_key = AES.new(decrAES, AES.MODE_CBC, iv)
+        decrAES = decryptor.decrypt(encrAES) #sir random caracter din client
+        print("Random Key from Client: ", decrAES, end='\n\n')
+        AES_key = AES.new(decrAES, AES.MODE_EAX, iv)
+
 
         #Decriptam datele cardului
         nameOnCard = AES_key.decrypt(nameOnCardEnc)
@@ -53,24 +55,32 @@ if __name__ == '__main__':
         print("Nume: ", nameOnCard)
         print("Numar Card:", numereCard)
         print("Data expirare:", validThru)
-        print("CVV :", cvvEnc)
+        print("CVV :", cvvEnc, end='\n\n')
 
-        # #Semnatura
-        # Sid = b'007'
-        # f = open('mykey.pem', 'r')
-        # key = RSA.import_key(f.read())
-        # h = SHA256.new(Sid)
-        # signature = pss.new(key).sign(h)
-        # print("Sid: ", Sid)
-        # print("Signature:", signature)
-        #
-        # #Criptam cu AES Sid si SgM(Sid)
-        # AES_key.encrypt(Sid)
-        # AES_key.encrypt(signature)
-        #
-        # #Trimitem catre Client Sid si SgM(Sid)
-        # c.send(Sid)
-        # c.sed(signature)
+        #Semnatura
+        Sid = b'007             '
+        f = open('mykey.pem', 'r')
+        key = RSA.import_key(f.read())
+        h = SHA256.new(Sid)
+        signature = pss.new(key).sign(h)
+        print("Sid:", Sid)
+        print("Signature:", signature, end='\n\n')
+
+        #Recream aceeasi cheie AES pentru criptare
+        aes_key = AES.new(decrAES, AES.MODE_EAX, AES_key.nonce)
+
+
+        #Criptam cu AES Sid si SgM(Sid)
+        SidEnc = aes_key.encrypt(Sid)
+        signatureEnc = aes_key.encrypt(signature)
+        print("Sid encrypted: ", SidEnc)
+        print("Signature encrypted: ", signatureEnc)
+
+        #Trimitem catre Client Sid si SgM(Sid) criptate
+        c.send(SidEnc)
+        time.sleep(0.2)
+        c.send(signatureEnc)
+        time.sleep(0.2)
 
     finally:
         c.close()
