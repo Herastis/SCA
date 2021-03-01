@@ -58,7 +58,7 @@ if __name__ == '__main__':
         print("CVV :", cvvEnc, end='\n\n')
 
         #Semnatura
-        Sid = b'007             '
+        Sid = b'007'
         f = open('mykey.pem', 'r')
         key = RSA.import_key(f.read())
         h = SHA256.new(Sid)
