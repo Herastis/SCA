@@ -1,4 +1,5 @@
 import socket
+import time
 from Cryptodome.PublicKey import RSA
 from Cryptodome.Cipher import PKCS1_OAEP
 from Cryptodome.Cipher import AES
@@ -25,13 +26,6 @@ nrCard = b'4367110087623798'
 validThru = b'09/23           ' #strftime maybe
 cvv = b'100             '
 
-# AES_key = ''.join(chr(random.randint(0, 0xFF)) for i in range(16))
-# print(AES_key)
-
-#Clientul genereaza AES Key
-# = b'123456789mnjhgdf'
-#key = get_random_bytes(16)
-#AES_key = AES.new(key, AES.MODE_EAX)
 iv = b'12345678abcdefgh'
 
 if __name__ == '__main__':
@@ -46,9 +40,9 @@ if __name__ == '__main__':
 
         #Criptam prin AES datele cardului
         key = get_random_bytes(16)
-        AES_key = AES.new(key, AES.MODE_CBC, iv)
+        AES_key = AES.new(key, AES.MODE_EAX, iv)
 
-        print("Random Key: ", key)
+        print("Random Key: ", key, end='\n\n')
         #Criptam numerele cardului, data de expirare, cvv
         nameOnCardEnc = AES_key.encrypt(nameOnCard)
         numereCardEnc = AES_key.encrypt(nrCard)
@@ -64,15 +58,29 @@ if __name__ == '__main__':
 
         #Trimitem datele cardului criptate
         sb.send(nameOnCardEnc)
+        time.sleep(0.2)
         sb.send(numereCardEnc)
+        time.sleep(0.2)
         sb.send(validThruEnc)
+        time.sleep(0.2)
         sb.send(cvv)
 
-        # #Primim de la Merchant Sid si SgM(Sid)
-        # Sid = sb.recv(16)
-        # signature = sb.recv(1024)
-        # print("Sid: ", Sid)
-        # print("Signature:", signature)
+        # Recream aceeasi cheie AES pentru criptare
+        #aes_key = AES.new(encrAES, AES.MODE_EAX, AES_key.nonce)
+
+        #Primim de la Merchant Sid si SgM(Sid) criptate
+        SidEnc = sb.recv(1024)
+        print("Sid encrypted: ", SidEnc)
+
+        signatureEnc = sb.recv(1024)
+        print("Signature encrypted:", signatureEnc)
+
+
+        # Sid = aes_key.decrypt(SidEnc)
+        # print("Sid: ", Sid, '\n\n')
+        #
+        # signature = aes_key.decrypt(signatureEnc)
+        # print("Signature: ", signature, '\n\n')
 
     finally:
         sb.close()
