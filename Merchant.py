@@ -10,6 +10,15 @@ from Crypto import Random
 import socket
 from _thread import *
 
+# def new_client(clientsocket, addr):
+#     while True:
+#         clientsocket.send(pm)
+#         time.sleep(0.2)
+#         clientsocket.send(sigM_enc)
+#         time.sleep(0.2)
+#         clientsocket.send(Aes_mg_enc)
+
+
 #c = client
 host = 'localhost'
 port = 9009
@@ -18,6 +27,17 @@ iv = b'12345678abcdefgh'
 # Cheia AES pentru M si PG
 key_mpg = get_random_bytes(16)
 AES_MPG = AES.new(key_mpg, AES.MODE_EAX)
+
+def verify_signature(PO, signature):
+    f = open('RSA_PrivKC.pem', 'r')
+    key = RSA.import_key(f.read())
+    h = SHA256.new(PO)
+    verifier = pss.new(key)
+    try:
+        verifier.verify(h, signature)
+        print("Semnatura valida!")
+    except (ValueError, TypeError):
+        print("Eroare, semnatura invalida pe PO")
 
 if __name__ == '__main__':
     #1.b) Generam cheile RSA ale merchantului
@@ -94,8 +114,10 @@ if __name__ == '__main__':
         keyaes = AES.new(decrAES, AES.MODE_EAX, AES_key.nonce)
         po_decr = keyaes.decrypt(po)
         print('Po decrypt ', po_decr)
-        po_list = po.split(b' # ')
+        po_list = po_decr.split(b' # ')
+        print(po_list)
         pubKC = keyaes.decrypt(public_keyEnc)
+        print(verify_signature(po,po_list[3]))
 
         #Semnam sid, pubKC si amount cu cheia privata a lui M
         sigM = po_list[0] + pubKC + bytes(public_key[1])
@@ -105,18 +127,20 @@ if __name__ == '__main__':
         signature = pss.new(key).sign(h)
         print("Signature:", signature, end='\n\n')
         sigM_enc = AES_MPG.encrypt(sigM)
-
+        time.sleep(1)
         #Criptez cheia AES dntre M si PG cu cheia pubilca a lui PG
         f = open('RSA_PrivKPG.pem', 'r')
         keyPG = RSA.import_key(f.read())
         encryptor = PKCS1_OAEP.new(keyPG)
         Aes_mg_enc = encryptor.encrypt(key_mpg)
-        thread.start_new_thread()
-        c.send(pm)
-        time.sleep(0.2)
-        c.send(sigM_enc)
-        time.sleep(0.2)
-        c.send(Aes_mg_enc)
+
+        # c, addr = s.accept()
+        # m = start_new_thread(new_client(c,addr))
+        # c.send(pm)
+        # time.sleep(0.2)
+        # c.send(sigM_enc)
+        # time.sleep(0.2)
+        # c.send(Aes_mg_enc)
 
     finally:
         c.close()

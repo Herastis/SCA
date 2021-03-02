@@ -15,7 +15,7 @@ f.write(RSA_Ckey.exportKey('PEM'))
 f.close()
 
 host = "localhost"
-port = 9010
+port = 9009
 c = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 c.connect((host, port))
 

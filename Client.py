@@ -38,6 +38,17 @@ file_out = open("AES_CPG.bin", "wb")
 file_out.write(key_cpg)
 file_out.close()
 
+def verify_signature(Sid, signature):
+    f = open('mykey.pem', 'r')
+    key = RSA.import_key(f.read())
+    h = SHA256.new(Sid)
+    verifier = pss.new(key)
+    try:
+        verifier.verify(h, signature)
+        print("Semnatura valida!")
+    except (ValueError, TypeError):
+        print("Eroare, semnatura invalida pe SID")
+
 if __name__ == '__main__':
     # 1.a) Generam cheile RSA ale clientului
     RSA_Ckey = RSA.generate(1024)
@@ -52,7 +63,9 @@ if __name__ == '__main__':
     # 1.Criptam cheia publica RSA cu AES
     public_keyEnc = AES_CM.encrypt(public_key)
     print("Random Key: ", key_aes, end='\n\n')
-
+    f = open('RSA_PubKC.pem', 'wb')
+    f.write(RSA_Ckey.publickey().exportKey('PEM'))
+    f.close()
     c = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     c.connect((host, port))
     try:
@@ -88,10 +101,9 @@ if __name__ == '__main__':
 
         Sid = aes_key.decrypt(SidEnc)
         print("Sid: ", Sid)
-
         signature = aes_key.decrypt(signatureEnc)
         print("Signature: ", signature, end='\n\n')
-
+        print(verify_signature(Sid,signature))
         # PI----------------------------------------------------------->
         # PI(concatenarea)
         pi = nameOnCard + b' # ' + validThru + b' # ' + nrCard + b' # ' + Sid + b' # ' + amount + nc + m  # + pb_key
