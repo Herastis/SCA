@@ -1,11 +1,13 @@
 import socket
 import time
-from Cryptodome.PublicKey import RSA
-from Cryptodome.Cipher import PKCS1_OAEP
-from Cryptodome.Cipher import AES
-from Cryptodome.Random import get_random_bytes
-from Cryptodome.Hash import SHA256
-from Cryptodome.Signature import pss
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
+from Crypto.Cipher import AES
+from Crypto.Random import get_random_bytes
+from Crypto.Hash import SHA256
+from Crypto.Signature import pss
+import socket
+
 
 host = "localhost"
 port = 9009
@@ -45,11 +47,11 @@ if __name__ == '__main__':
     private_key = RSA_Ckey.exportKey()
 
     # 1.c) Cream cheia AES:
-    key = get_random_bytes(16)
-    AES_CM = AES.new(key, AES.MODE_EAX, iv)
+    key_aes = get_random_bytes(16)
+    AES_CM = AES.new(key_aes, AES.MODE_EAX, iv)
     # 1.Criptam cheia publica RSA cu AES
     public_keyEnc = AES_CM.encrypt(public_key)
-    print("Random Key: ", key, end='\n\n')
+    print("Random Key: ", key_aes, end='\n\n')
 
     c = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     c.connect((host, port))
@@ -69,13 +71,13 @@ if __name__ == '__main__':
         # Cheia AES criptata cu cea publica
         # Criptam cheia AES cu cheia publica a lui Merchant
         encryptor = PKCS1_OAEP.new(pubKM)
-        publicKey_PG = encryptor.encrypt(key)
+        publicKey_PG = encryptor.encrypt(key_aes)
 
         # 1.Trimitem cheia AES criptata la Merchant
         c.sendall(publicKey_PG)
 
         # Recream aceeasi cheie AES pentru criptare
-        aes_key = AES.new(key, AES.MODE_EAX, AES_CM.nonce)
+        aes_key = AES.new(key_aes, AES.MODE_EAX, AES_CM.nonce)
 
         # Primim de la Merchant Sid si SgM(Sid) criptate
         SidEnc = c.recv(1024)
@@ -92,7 +94,7 @@ if __name__ == '__main__':
 
         # PI----------------------------------------------------------->
         # PI(concatenarea)
-        pi = nameOnCard + b'#' + validThru + b'#' + nrCard + b'#' + Sid + b'#' + amount + nc + m  # + pb_key
+        pi = nameOnCard + b' # ' + validThru + b' # ' + nrCard + b' # ' + Sid + b' # ' + amount + nc + m  # + pb_key
         print("PI: ", pi)
 
         # Aplicam semnatura pe PI
@@ -110,7 +112,7 @@ if __name__ == '__main__':
         # PI<-----------------------------------------------------------
 
         # PO----------------------------------------------------------->
-        signature_many = Sid + amount + nc  # + OrderDesc +
+        signature_many = Sid + amount + nc  + data
         print("SigC: ", signature_many)
 
         # Aplicam semnatura pe SigC
@@ -121,13 +123,14 @@ if __name__ == '__main__':
         print("Signature C: ", SigC_order_sid_amount_nc, end='\n\n')
 
         # PO(Concatenam)
-        po = Sid + b'#' + amount + b'#' + nc + b'#' + SigC_order_sid_amount_nc + b'#' + data
+        po = Sid + b' # ' + amount + b' # ' + nc + b' # ' + SigC_order_sid_amount_nc + b' # ' + data
         print("PO: ", po)
 
         # Criptam PO si SigC
-        poEnc = AES_CM.encrypt(po)
+        aes_key = AES.new(key_aes, AES.MODE_EAX, AES_CM.nonce)
+        poEnc = aes_key.encrypt(po)
         print("PO criptat: ", poEnc, end='\n\n')
-        SigC_ord_sid_amound_nc_ENC = AES_CM.encrypt(SigC_order_sid_amount_nc)
+        SigC_ord_sid_amound_nc_ENC = aes_key.encrypt(SigC_order_sid_amount_nc)
         print("Signature C criptat: ", SigC_ord_sid_amound_nc_ENC, end='\n\n')
         # PO<-----------------------------------------------------------
 
@@ -144,7 +147,7 @@ if __name__ == '__main__':
         # Cheia AES dintre C si PG criptata cu cheia RSA public a lui PG:
         publicKey_PG = encryptor.encrypt(key_cpg)
 
-        Pas3 = pmEnc + b'#' + poEnc
+        Pas3 = pmEnc + b' # ' + poEnc
         print("Pas3:", Pas3)
 
         # Semnatura pe SID
@@ -157,6 +160,7 @@ if __name__ == '__main__':
 
         # Trimitem catre merchant
         c.send(Pas3)
+        time.sleep(0.2)
         c.send(publicKey_PG)
     finally:
         c.close()

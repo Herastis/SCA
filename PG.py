@@ -1,24 +1,25 @@
 import socket
 import time
-from Cryptodome.PublicKey import RSA
-from Cryptodome.Cipher import PKCS1_OAEP
-from Cryptodome.Cipher import AES
-from Cryptodome.Random import get_random_bytes
-from Cryptodome.Hash import SHA256
-from Cryptodome.Signature import pss
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import PKCS1_OAEP
+from Crypto.Cipher import AES
+from Crypto.Random import get_random_bytes
+from Crypto.Hash import SHA256
+
+RSA_Ckey = RSA.generate(1024)
+f = open('RSA_PubKPG.pem', 'wb')
+f.write(RSA_Ckey.publickey().exportKey('PEM'))
+f.close()
+f = open('RSA_PrivKPG.pem', 'wb')
+f.write(RSA_Ckey.exportKey('PEM'))
+f.close()
 
 host = "localhost"
-port = 9009
+port = 9010
+c = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+c.connect((host, port))
 
-#----Optrional
-#Customer
-if __name__ == '__main__':
-    #1.a) Generam cheile RSA ale clientului
-    RSA_Ckey = RSA.generate(1024)
-    f = open('RSA_PubKPG.pem', 'wb')
-    f.write(RSA_Ckey.publickey().exportKey('PEM'))
-    f.close()
-    f = open('RSA_PrivKPG.pem', 'wb')
-    f.write(RSA_Ckey.exportKey('PEM'))
-    f.close()
-    print("Da")
+pm = c.recv(1024)
+sigM = c.recv(1024)
+AES_mpg = c.recv(1024)
+
